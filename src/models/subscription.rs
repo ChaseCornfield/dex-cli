@@ -1,4 +1,5 @@
 use serde::Serialize;
+use super::constants::SUBSCRIBE_METHOD;
 
 #[derive(Serialize)]
 pub struct SubscriptionMessage {
@@ -8,24 +9,25 @@ pub struct SubscriptionMessage {
 
 #[derive(Serialize)]
 pub struct Subscription {
-    #[serde(rename = "type")]
-    pub kind: &'static str,
+    #[serde(rename = "type")]  // must be literal, see constants::SUB_TYPE_LABEL
+    pub kind: String,
     pub coin: String,
 }
 
-pub fn create_subscription_message(coin_name:String) -> SubscriptionMessage
+/// Function to create the subscription message type to facilitate the process
+pub fn create_subscription_message(sub_kind: String, coin_name:String) -> SubscriptionMessage
 {
     let sub = 
     Subscription 
     {
-        kind: "bbo",
-        coin: coin_name.to_string(),
+        kind: sub_kind,
+        coin: coin_name,
     };
     
     let sub_message = 
     SubscriptionMessage
     {
-        method: "subscribe",
+        method: SUBSCRIBE_METHOD,
         subscription:sub,
     };
 
