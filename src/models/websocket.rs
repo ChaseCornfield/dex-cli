@@ -1,3 +1,5 @@
+use crate::market;
+
 use super::subscription::create_subscription_message;
 use super::message_handler::{parse_message, IncomingMessage};
 use super::constants::{WEBSOCKET_ADDRESS, CHANNEL_BBO, CHANNEL_TRADES};
@@ -6,13 +8,17 @@ use futures_util::StreamExt;
 use futures_util::SinkExt;
 use futures_util::Sink;
 use tungstenite::Message;
+use crate::market::marketstate::MarketState;
+use crossterm::{cursor, terminal, ExecutableCommand};
+use std::io::{self, Write};
 
 /// I created this function to be reused and for better modularity
 /// #Returns the formatted message if corrected called, or None if no data present or websocket error or a 
 /// Non text message print if the text received is binary
-fn format_sub(msg: Option<Result<Message, tungstenite::Error>>)
-    -> Result<(), Box<dyn std::error::Error>>
-{
+fn format_sub(msg: Option<Result<Message, tungstenite::Error>>,
+                market_state: &mut MarketState,)
+                -> Result<(), Box<dyn std::error::Error>>
+        {
     match msg {
         None => {
             println!("Stream ended (None)");
@@ -27,17 +33,26 @@ fn format_sub(msg: Option<Result<Message, tungstenite::Error>>)
             {
                 Ok(IncomingMessage::Bbo { data }) => 
                 {
-                    println!("BBO: {:?}", data);
+                   // println!("BBO: {:?}", data); 
+                   print!("")
                 }
                 Ok(IncomingMessage::Trades { data }) => 
                 {
-                    println!("Trade: {:?}", data);
+                    // Add each trade to market state
+                    for trade in data {
+                        market_state.add_trade(trade);
+                    }
+                    // Maybe print current price for now
+                    io::stdout()
+                    .execute(cursor::MoveToColumn(0))?
+                    .execute(terminal::Clear(terminal::ClearType::CurrentLine))?;
+                    print!("Updated price: ${:.2}", market_state.get_price());
+                    io::stdout().flush()?;
                 }
-                Err(e) => 
-                {
-                    // parsing failed (maybe subscriptionResponse or unknown)
-                    println!("Could not parse: {} - raw: {}", e, text);
+                Ok(IncomingMessage::SubscriptionResponse { .. }) => {
+                    // Subscription confirmed, do nothing
                 }
+
             }
         }
         // otherwise it returts one of this message based on the most commum error possibilites
@@ -75,6 +90,9 @@ pub async fn websocket() -> Result<(), Box<dyn std::error::Error>>
     let (ws_stream, _response) = connect_async(WEBSOCKET_ADDRESS).await?;
 
     let (mut write, mut read) = ws_stream.split();
+
+    // Create the state tracker here
+    let mut market_state = MarketState::new("BTC".to_string());
     
     subscribe(&mut write, CHANNEL_BBO, "BTC").await?; // sub for bids and ask price BTC
     subscribe(&mut write, CHANNEL_TRADES, "BTC").await?; // sub for last traded price BTC
@@ -83,7 +101,7 @@ pub async fn websocket() -> Result<(), Box<dyn std::error::Error>>
     // with (if let)
     while let Some(msg) = read.next().await
     { 
-        format_sub(Some(msg))?;
+        format_sub(Some(msg), &mut market_state)?;
     }
 
     Ok(())

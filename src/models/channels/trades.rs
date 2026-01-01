@@ -16,13 +16,8 @@ pub struct Data
     pub px: String, // price
     pub side: String, // A || B , for Ask (Seller) or Bid (buyer)
     pub sz: String, // Size
-    pub tid: u128, // traderID
+    pub tid: u64, // traderID
     pub time: u64,
-    pub users: [User; 2], // list of users 
+    pub users: [String; 2],
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-pub struct User{
-    user: String,
-}

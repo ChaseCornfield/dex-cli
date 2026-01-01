@@ -1,0 +1,1 @@
+pub const MEMORY_TRADE_HISTORY_SIZE: usize = 50;

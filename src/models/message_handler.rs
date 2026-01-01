@@ -12,7 +12,10 @@ pub enum IncomingMessage
     Bbo { data: bbo::Data },      
 
     #[serde(rename = "trades")]  // constants::CHANNEL_TRADES
-    Trades { data: trades::Data }, 
+    Trades { data: Vec<trades::Data> }, 
+    
+    #[serde(rename = "subscriptionResponse")]
+    SubscriptionResponse { data: serde_json::Value }, // Just capture it, don't need to parse
 }
 
 pub fn parse_message(text: &str) -> Result<IncomingMessage, Box<dyn std::error::Error>>{
