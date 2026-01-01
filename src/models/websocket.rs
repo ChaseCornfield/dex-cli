@@ -52,6 +52,12 @@ fn format_sub(msg: Option<Result<Message, tungstenite::Error>>,
                 Ok(IncomingMessage::SubscriptionResponse { .. }) => {
                     // Subscription confirmed, do nothing
                 }
+                Err(e) => {
+                    // Ignore subscription confirmations
+                    if !text.contains("subscriptionResponse") {
+                        println!("Could not parse: {} - raw: {}", e, text);
+                    }
+                }
 
             }
         }
